@@ -1,3 +1,4 @@
+import java.util.InputMismatchException;
 import java.util.Random;
 
 public class HundirLaFlota {
@@ -37,7 +38,7 @@ public class HundirLaFlota {
         while ( gameRunning(currentPlayerTable()) ){
             print.printGame(currentPlayerTable(), currentPlayerEnemyBoatsAttacked());
             print.printPlayerTurn(currentPlayerToString());
-            rowColumn = userInterface.getRowColumn();
+            checkAndAssignRowAndColumn();
             attackHit = attackHit();
             setIconAttackedRowAndColumn(rowColumn);
             setTurn();
@@ -50,6 +51,21 @@ public class HundirLaFlota {
     private void setTurn(){
         if (!attackHit){
             turn++;
+        }
+    }
+    private void checkAndAssignRowAndColumn (){
+        String [] inputRowCol;
+        try{
+            inputRowCol = userInterface.getRowColumn();
+            rowColumn[0] = Integer.parseInt(inputRowCol[0]);
+            rowColumn[1] = Integer.parseInt(inputRowCol[1]);
+            if ( !isNotOutOfBounds(rowColumn[0], rowColumn[1]) || !isInteger(inputRowCol[0]) || !isInteger(inputRowCol[1]) ){
+                throw new Exception();
+            }
+
+        }catch (Exception exception){
+            System.out.println("The Number you tried to enter is not correct. Try again putting a integer of value 0-9 in both fields.");
+            checkAndAssignRowAndColumn();
         }
     }
 
@@ -185,6 +201,14 @@ public class HundirLaFlota {
 
     private boolean isNotOutOfBounds (int row, int column){
         return ( row < GAME_LENGTH ) && ( row > -1 ) && ( column < GAME_LENGTH ) && ( column > -1 );
+    }
+    public static boolean isInteger(String s) {
+        try {
+            Integer.parseInt(s);
+        } catch(Exception e) {
+            return false;
+        }// only got here if we didn't return false
+        return true;
     }
 
 
