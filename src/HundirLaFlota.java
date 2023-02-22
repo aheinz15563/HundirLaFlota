@@ -1,4 +1,3 @@
-import java.util.InputMismatchException;
 import java.util.Random;
 
 public class HundirLaFlota {
@@ -11,12 +10,11 @@ public class HundirLaFlota {
     private final char [][] boatsAttackedPlayer2;
     private final Print print;
     private final UserInterface userInterface;
-    private int [] rowColumn;
+    private final int [] rowColumn;
     private int turn;
     private final Random random;
     private final char [] boatState;
     private final char failedIcon;
-    private boolean attackHit;
 
     public HundirLaFlota(){
         boatsPlayer1 = new char[GAME_LENGTH][GAME_WIDTH];
@@ -28,7 +26,7 @@ public class HundirLaFlota {
         rowColumn = new int[2];
         turn = 0;
         random = new Random();
-        boatState = new char[]{'O', 'X'};
+        boatState = new char[]{'O', 'X', 'H'};
         failedIcon = '.';
         generateBoats(boatsPlayer1);
         generateBoats(boatsPlayer2);
@@ -36,22 +34,22 @@ public class HundirLaFlota {
 
     public void start (){
         while ( gameRunning(currentPlayerTable()) ){
-            print.printGame(currentPlayerTable(), currentPlayerEnemyBoatsAttacked());
+            print.printGame(currentPlayerTable(), currentPlayerBoatsAttacked());
             print.printPlayerTurn(currentPlayerToString());
             checkAndAssignRowAndColumn();
-            attackHit = attackHit();
-            setIconAttackedRowAndColumn(rowColumn);
-            setTurn();
+            setAttackedPositionState(rowColumn[0], rowColumn[1]);
+            assignTurn();
         }
     }
     private boolean attackHit (){
         return nextPlayerTable()[rowColumn[0]][rowColumn[1]] == boatState[0];
     }
 
-    private void setTurn(){
-        if (!attackHit){
-            turn++;
+    private void assignTurn(){
+        if ( ( attackHit() ) || (!positionIsFree(rowColumn[0], rowColumn[1]))  ){
+            return;
         }
+        turn++;
     }
     private void checkAndAssignRowAndColumn (){
         String [] inputRowCol;
@@ -69,14 +67,20 @@ public class HundirLaFlota {
         }
     }
 
-    private void setIconAttackedRowAndColumn(int [] rowColumn){
-        if (attackHit){
-            currentPlayerEnemyBoatsAttacked()[rowColumn[0]][rowColumn[1]] = boatState[1];
-            nextPlayerTable()[rowColumn[0]][rowColumn[1]] = boatState[1];
-            return;
+    private void setAttackedPositionState(int row, int col){
+        if (positionIsFree(row, col)){
+            if (attackHit()){
+                currentPlayerBoatsAttacked()[rowColumn[0]][rowColumn[1]] = boatState[1];
+                nextPlayerTable()[rowColumn[0]][rowColumn[1]] = boatState[1];
+                return;
+            }
+            currentPlayerBoatsAttacked()[rowColumn[0]][rowColumn[1]] = failedIcon;
+            nextPlayerTable()[rowColumn[0]][rowColumn[1]] = failedIcon;
         }
-        currentPlayerEnemyBoatsAttacked()[rowColumn[0]][rowColumn[1]] = failedIcon;
-        nextPlayerTable()[rowColumn[0]][rowColumn[1]] = failedIcon;
+    }
+
+    private boolean positionIsFree (int row, int col){
+        return currentPlayerBoatsAttacked()[row][col] == 'O' || currentPlayerBoatsAttacked()[row][col] == '0';
     }
 
     private String currentPlayerToString(){
@@ -93,18 +97,18 @@ public class HundirLaFlota {
         return boatsPlayer2;
     }
 
-    private char[][] currentPlayerEnemyBoatsAttacked(){
-        if (turn % 2 == 0){
-            return boatsAttackedPlayer1;
-        }
-        return boatsAttackedPlayer2;
-    }
-
     private char[][] nextPlayerTable(){
         if (turn % 2 != 0){
             return boatsPlayer1;
         }
         return boatsPlayer2;
+    }
+
+    private char[][] currentPlayerBoatsAttacked(){
+        if (turn % 2 == 0){
+            return boatsAttackedPlayer1;
+        }
+        return boatsAttackedPlayer2;
     }
 
     private boolean gameRunning (char [][] currentPlayerTable){
