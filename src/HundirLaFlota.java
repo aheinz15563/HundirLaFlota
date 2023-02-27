@@ -4,113 +4,49 @@ public class HundirLaFlota {
 
     private final int GAME_LENGTH = 10;
     private final int GAME_WIDTH = 10;
-    private final char [][] boatsPlayer1;
-    private final char [][] boatsPlayer2;
-    private final char [][] boatsAttackedPlayer1;
-    private final char [][] boatsAttackedPlayer2;
-    private final Print print;
-    private final UserInterface userInterface;
-    private final int [] rowColumn;
+    private final int BOAT_MAX_LENGTH = 4;
+    private char [][] boatsPlayer1;
+    private char [][] boatsPlayer2;
+    private Print print;
+    private UserInterface userInterface;
+    private int [] rowColumn;
     private int turn;
-    private final Random random;
-    private final char [] boatState;
-    private final char failedIcon;
+    private Random random;
+    private char [] boatState;
+    private char failedIcon;
+    private boolean positionIsFree;
+    private int [][] incrementType;
 
     public HundirLaFlota(){
         boatsPlayer1 = new char[GAME_LENGTH][GAME_WIDTH];
         boatsPlayer2 = new char[GAME_LENGTH][GAME_WIDTH];
-        boatsAttackedPlayer1 = new char[GAME_LENGTH][GAME_WIDTH];
-        boatsAttackedPlayer2 = new char[GAME_LENGTH][GAME_WIDTH];
         userInterface = new UserInterface();
-        print = new Print();
+        print = new Print(this);
         rowColumn = new int[2];
         turn = 0;
         random = new Random();
         boatState = new char[]{'O', 'X', 'H'};
         failedIcon = '.';
+        incrementType = new int[][]{{0,1},{0,-1},{1,0},{-1,0}};
         generateBoats(boatsPlayer1);
         generateBoats(boatsPlayer2);
     }
 
     public void start (){
         while ( gameRunning(currentPlayerTable()) ){
-            print.printGame(currentPlayerTable(), currentPlayerBoatsAttacked());
+            print.printGame(currentPlayerTable(), nextPlayerTable());
             print.printPlayerTurn(currentPlayerToString());
             checkAndAssignRowAndColumn();
-            setAttackedPositionState(rowColumn[0], rowColumn[1]);
-            assignTurn();
-        }
-    }
-    private boolean attackHit (){
-        return nextPlayerTable()[rowColumn[0]][rowColumn[1]] == boatState[0];
-    }
-
-    private void assignTurn(){
-        if ( ( attackHit() ) || (!positionIsFree(rowColumn[0], rowColumn[1]))  ){
-            return;
-        }
-        turn++;
-    }
-    private void checkAndAssignRowAndColumn (){
-        String [] inputRowCol;
-        try{
-            inputRowCol = userInterface.getRowColumn();
-            rowColumn[0] = Integer.parseInt(inputRowCol[0]);
-            rowColumn[1] = Integer.parseInt(inputRowCol[1]);
-            if ( !isNotOutOfBounds(rowColumn[0], rowColumn[1]) || !isInteger(inputRowCol[0]) || !isInteger(inputRowCol[1]) ){
-                throw new Exception();
+            positionIsFree = positionIsFree(rowColumn[0],rowColumn[1]);
+            setAttackedPositionState(rowColumn[0],rowColumn[1]);
+            assignTurn(rowColumn[0], rowColumn[1]);
+            checkAndAssignDrownedBoats(rowColumn[0], rowColumn[1]);
+            if (!positionIsFree){
+                print.printSpaces();
+                System.out.println("That position was already used... Try Again");
             }
-
-        }catch (Exception exception){
-            System.out.println("The Number you tried to enter is not correct. Try again putting a integer of value 0-9 in both fields.");
-            checkAndAssignRowAndColumn();
         }
     }
-
-    private void setAttackedPositionState(int row, int col){
-        if (positionIsFree(row, col)){
-            if (attackHit()){
-                currentPlayerBoatsAttacked()[rowColumn[0]][rowColumn[1]] = boatState[1];
-                nextPlayerTable()[rowColumn[0]][rowColumn[1]] = boatState[1];
-                return;
-            }
-            currentPlayerBoatsAttacked()[rowColumn[0]][rowColumn[1]] = failedIcon;
-            nextPlayerTable()[rowColumn[0]][rowColumn[1]] = failedIcon;
-        }
-    }
-
-    private boolean positionIsFree (int row, int col){
-        return currentPlayerBoatsAttacked()[row][col] == 'O' || currentPlayerBoatsAttacked()[row][col] == '0';
-    }
-
-    private String currentPlayerToString(){
-        if (turn % 2 == 0){
-            return "Player1";
-        }
-        return "Player2";
-    }
-
-    private char[][] currentPlayerTable(){
-        if (turn % 2 == 0){
-            return boatsPlayer1;
-        }
-        return boatsPlayer2;
-    }
-
-    private char[][] nextPlayerTable(){
-        if (turn % 2 != 0){
-            return boatsPlayer1;
-        }
-        return boatsPlayer2;
-    }
-
-    private char[][] currentPlayerBoatsAttacked(){
-        if (turn % 2 == 0){
-            return boatsAttackedPlayer1;
-        }
-        return boatsAttackedPlayer2;
-    }
-
     private boolean gameRunning (char [][] currentPlayerTable){
         for (char[] chars : currentPlayerTable) {
             for (int z = 0; z < currentPlayerTable[0].length; z++) {
@@ -147,6 +83,23 @@ public class HundirLaFlota {
 
         }
 
+    }
+
+    private boolean boatsInArea (char[][] game, int row, int column){
+
+        for (int i = -1; i <= 1; i++){
+            for (int z = -1; z <= 1; z++){
+                if (isNotOutOfBounds(row + i, column + z ) ){
+                    if ( ( row + i == row ) && ( column + z == column ) ){
+                        continue;
+                    }
+                    if ( ( game[row +i][column +z] == boatState[0] ) ){
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
     }
 
     private boolean boatCanBePlaced (char[][] game, int row, int column, int length, boolean isVertical){
@@ -186,25 +139,114 @@ public class HundirLaFlota {
         }
     }
 
-    private boolean boatsInArea (char[][] game, int row, int column){
+    private void checkAndAssignRowAndColumn(){
+        String [] inputRowCol;
+        try{
+            inputRowCol = userInterface.getRowColumn();
+            rowColumn[0] = Integer.parseInt(inputRowCol[0]);
+            rowColumn[1] = Integer.parseInt(inputRowCol[1]);
+            if ( !isNotOutOfBounds(rowColumn[0], rowColumn[1]) || !isInteger(inputRowCol[0]) || !isInteger(inputRowCol[1]) ){
+                throw new Exception();
+            }
+        }catch (Exception exception){
+            print.printRowColumnError();
+            checkAndAssignRowAndColumn();
+        }
+    }
 
-        for (int i = -1; i <= 1; i++){
-            for (int z = -1; z <= 1; z++){
-                if (isNotOutOfBounds(row + i, column + z ) ){
-                    if ( ( row + i == row ) && ( column + z == column ) ){
-                        continue;
+    private boolean positionIsFree (int row, int col){
+        return nextPlayerTable()[row][col] == 'O' || nextPlayerTable()[row][col] == 0;
+    }
+
+    private boolean boatHit(int row, int col){
+        return ( nextPlayerTable()[row][col] == boatState[0] ) || ( nextPlayerTable()[row][col] == boatState[1] );
+    }
+
+    private boolean boatDrowned (int row, int col){
+
+        int rowIncrement;
+        int colIncrement;
+
+        if (nextPlayerTable()[row][col] == boatState[1]){
+            for (int i = 0; i < incrementType.length;i++){
+                rowIncrement = row;
+                colIncrement = col;
+                while ( ( isNotOutOfBounds (rowIncrement,colIncrement) ) && ( nextPlayerTable()[rowIncrement][colIncrement] != failedIcon ) && ( nextPlayerTable()[rowIncrement][colIncrement] != '\u0000' ) ){
+                    if (nextPlayerTable()[rowIncrement][colIncrement] == boatState[0]){
+                        return false;
                     }
-                    if ( ( game[row +i][column +z] == boatState[0] ) ){
-                        return true;
-                    }
+                    rowIncrement += incrementType[i][0];
+                    colIncrement += incrementType[i][1];
                 }
             }
+            return true;
         }
         return false;
     }
 
+    private void drownBoat (int row, int col){
+
+        int rowIncrement;
+        int colIncrement;
+
+        for (int i = 0; i < incrementType.length;i++){
+            rowIncrement = row;
+            colIncrement = col;
+            while ( ( isNotOutOfBounds (rowIncrement,colIncrement) ) && ( nextPlayerTable()[rowIncrement][colIncrement] != failedIcon ) && ( nextPlayerTable()[rowIncrement][colIncrement] != '\u0000' ) ){
+                nextPlayerTable()[rowIncrement][colIncrement] = boatState[2];
+                rowIncrement += incrementType[i][0];
+                colIncrement += incrementType[i][1];
+            }
+        }
+    }
+
+    private void checkAndAssignDrownedBoats(int row,int col){
+        if (boatDrowned(row,col)){
+            drownBoat(row,col);
+        }
+    }
+
+    private void setAttackedPositionState(int row, int col){
+
+        if (positionIsFree){
+            if (boatHit(row,col)){
+                nextPlayerTable()[row][col] = boatState[1];
+                return;
+            }
+            nextPlayerTable()[row][col] = failedIcon;
+        }
+    }
+
+    private void assignTurn(int row, int col){
+        if ( ( boatHit(row,col) ) || ( !positionIsFree ) ) {
+            return;
+        }
+        turn++;
+    }
+
+    private String currentPlayerToString(){
+        if (turn % 2 == 0){
+            return "Player1";
+        }
+        return "Player2";
+    }
+
+    private char[][] currentPlayerTable(){
+        if (turn % 2 == 0){
+            return boatsPlayer1;
+        }
+        return boatsPlayer2;
+    }
+
+    private char[][] nextPlayerTable(){
+        if (turn % 2 != 0){
+            return boatsPlayer1;
+        }
+        return boatsPlayer2;
+    }
+
     private boolean isNotOutOfBounds (int row, int column){
-        return ( row < GAME_LENGTH ) && ( row > -1 ) && ( column < GAME_LENGTH ) && ( column > -1 );
+        return ( row < GAME_LENGTH ) && ( row > -1 ) && ( column < GAME_WIDTH ) && ( column > -1 );
     }
     public static boolean isInteger(String s) {
         try {
@@ -215,6 +257,88 @@ public class HundirLaFlota {
         return true;
     }
 
+    //GETTERS
+
+    public int getGAME_LENGTH() {
+        return GAME_LENGTH;
+    }
+
+    public int getGAME_WIDTH() {
+        return GAME_WIDTH;
+    }
+
+    public char[][] getBoatsPlayer1() {
+        return boatsPlayer1;
+    }
+
+    public char[][] getBoatsPlayer2() {
+        return boatsPlayer2;
+    }
+
+    public Print getPrint() {
+        return print;
+    }
+
+    public UserInterface getUserInterface() {
+        return userInterface;
+    }
+
+    public int[] getRowColumn() {
+        return rowColumn;
+    }
+
+    public int getTurn() {
+        return turn;
+    }
+
+    public Random getRandom() {
+        return random;
+    }
+
+    public char[] getBoatState() {
+        return boatState;
+    }
+
+    public char getFailedIcon() {
+        return failedIcon;
+    }
+
+    //SETTERS
 
 
+    public void setBoatsPlayer1(char[][] boatsPlayer1) {
+        this.boatsPlayer1 = boatsPlayer1;
+    }
+
+    public void setBoatsPlayer2(char[][] boatsPlayer2) {
+        this.boatsPlayer2 = boatsPlayer2;
+    }
+
+    public void setPrint(Print print) {
+        this.print = print;
+    }
+
+    public void setUserInterface(UserInterface userInterface) {
+        this.userInterface = userInterface;
+    }
+
+    public void setRowColumn(int[] rowColumn) {
+        this.rowColumn = rowColumn;
+    }
+
+    public void setTurn(int turn) {
+        this.turn = turn;
+    }
+
+    public void setRandom(Random random) {
+        this.random = random;
+    }
+
+    public void setBoatState(char[] boatState) {
+        this.boatState = boatState;
+    }
+
+    public void setFailedIcon(char failedIcon) {
+        this.failedIcon = failedIcon;
+    }
 }
