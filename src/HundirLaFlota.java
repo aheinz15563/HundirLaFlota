@@ -4,7 +4,6 @@ public class HundirLaFlota {
 
     private final int GAME_LENGTH = 10;
     private final int GAME_WIDTH = 10;
-    private final int BOAT_MAX_LENGTH = 4;
     private char [][] boatsPlayer1;
     private char [][] boatsPlayer2;
     private Print print;
@@ -16,6 +15,8 @@ public class HundirLaFlota {
     private char failedIcon;
     private boolean positionIsFree;
     private int [][] incrementType;
+    private static final String ANSI_YELLOW = "\u001B[93m";
+    private static final String ANSI_BLUE = "\u001B[96m";
 
     public HundirLaFlota(){
         boatsPlayer1 = new char[GAME_LENGTH][GAME_WIDTH];
@@ -46,6 +47,7 @@ public class HundirLaFlota {
                 System.out.println("That position was already used... Try Again");
             }
         }
+        print.printWinner(currentPlayerToString());
     }
     private boolean gameRunning (char [][] currentPlayerTable){
         for (char[] chars : currentPlayerTable) {
@@ -248,13 +250,20 @@ public class HundirLaFlota {
     private boolean isNotOutOfBounds (int row, int column){
         return ( row < GAME_LENGTH ) && ( row > -1 ) && ( column < GAME_WIDTH ) && ( column > -1 );
     }
-    public static boolean isInteger(String s) {
+    private static boolean isInteger(String s) {
         try {
             Integer.parseInt(s);
         } catch(Exception e) {
             return false;
         }// only got here if we didn't return false
         return true;
+    }
+
+    public String [] getColorCodes (){
+        if (turn % 2 == 0){
+            return new String[]{ANSI_BLUE,ANSI_YELLOW};
+        }
+        return new String[]{ANSI_YELLOW,ANSI_BLUE};
     }
 
     //GETTERS
