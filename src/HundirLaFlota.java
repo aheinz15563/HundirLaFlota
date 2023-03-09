@@ -1,11 +1,8 @@
 import java.util.Random;
 
 public class HundirLaFlota {
-
-    private final int GAME_LENGTH = 10;
-    private final int GAME_WIDTH = 10;
-    private char [][] boatsPlayer1;
-    private char [][] boatsPlayer2;
+    private Table boatsPlayer1;
+    private Table boatsPlayer2;
     private Print print;
     private UserInterface userInterface;
     private int [] rowColumn;
@@ -15,12 +12,10 @@ public class HundirLaFlota {
     private char failedIcon;
     private boolean positionIsFree;
     private int [][] incrementType;
-    private static final String ANSI_YELLOW = "\u001B[93m";
-    private static final String ANSI_BLUE = "\u001B[96m";
 
     public HundirLaFlota(){
-        boatsPlayer1 = new char[GAME_LENGTH][GAME_WIDTH];
-        boatsPlayer2 = new char[GAME_LENGTH][GAME_WIDTH];
+        boatsPlayer1 = new Table();
+        boatsPlayer2 = new Table();
         userInterface = new UserInterface();
         print = new Print(this);
         rowColumn = new int[2];
@@ -60,7 +55,7 @@ public class HundirLaFlota {
         return false;
     }
 
-    private void generateBoats(char [][] game){
+    private void generateBoats(Table game){
         int row;
         int column;
         int [] boatArray = new int[]{1,2,3,4};
@@ -72,8 +67,8 @@ public class HundirLaFlota {
 
                 boatPlaced = false;
                 while(!boatPlaced){
-                    row = random.nextInt(GAME_LENGTH);
-                    column = random.nextInt(GAME_WIDTH);
+                    row = random.nextInt(currentPlayerTable().getGAME_LENGTH());
+                    column = random.nextInt(currentPlayerTable().getGAME_WIDTH());
                     isVertical = random.nextBoolean();
                     if (boatCanBePlaced(game,row,column,boatArray.length -i, isVertical)){
                         placeBoat(game,row,column,boatArray.length -i, isVertical);
@@ -87,15 +82,15 @@ public class HundirLaFlota {
 
     }
 
-    private boolean boatsInArea (char[][] game, int row, int column){
+    private boolean boatsInArea (Table game, int row, int column){
 
         for (int i = -1; i <= 1; i++){
             for (int z = -1; z <= 1; z++){
-                if (isNotOutOfBounds(row + i, column + z ) ){
+                if (currentPlayerTable().isNotOutOfBounds(row + i, column + z ) ){
                     if ( ( row + i == row ) && ( column + z == column ) ){
                         continue;
                     }
-                    if ( ( game[row +i][column +z] == boatState[0] ) ){
+                    if ( ( currentPlayerTable().getPositions(row +i, column+z) == boatState[0] ) ){
                         return true;
                     }
                 }
@@ -104,7 +99,7 @@ public class HundirLaFlota {
         return false;
     }
 
-    private boolean boatCanBePlaced (char[][] game, int row, int column, int length, boolean isVertical){
+    private boolean boatCanBePlaced (Table game, int row, int column, int length, boolean isVertical){
         int counter = 0;
         int rowModified = row;
         int colModified = column;
@@ -164,44 +159,6 @@ public class HundirLaFlota {
         return ( nextPlayerTable()[row][col] == boatState[0] ) || ( nextPlayerTable()[row][col] == boatState[1] );
     }
 
-    private boolean boatDrowned (int row, int col){
-
-        int rowIncrement;
-        int colIncrement;
-
-        if (nextPlayerTable()[row][col] == boatState[1]){
-            for (int i = 0; i < incrementType.length;i++){
-                rowIncrement = row;
-                colIncrement = col;
-                while ( ( isNotOutOfBounds (rowIncrement,colIncrement) ) && ( nextPlayerTable()[rowIncrement][colIncrement] != failedIcon ) && ( nextPlayerTable()[rowIncrement][colIncrement] != '\u0000' ) ){
-                    if (nextPlayerTable()[rowIncrement][colIncrement] == boatState[0]){
-                        return false;
-                    }
-                    rowIncrement += incrementType[i][0];
-                    colIncrement += incrementType[i][1];
-                }
-            }
-            return true;
-        }
-        return false;
-    }
-
-    private void drownBoat (int row, int col){
-
-        int rowIncrement;
-        int colIncrement;
-
-        for (int i = 0; i < incrementType.length;i++){
-            rowIncrement = row;
-            colIncrement = col;
-            while ( ( isNotOutOfBounds (rowIncrement,colIncrement) ) && ( nextPlayerTable()[rowIncrement][colIncrement] != failedIcon ) && ( nextPlayerTable()[rowIncrement][colIncrement] != '\u0000' ) ){
-                nextPlayerTable()[rowIncrement][colIncrement] = boatState[2];
-                rowIncrement += incrementType[i][0];
-                colIncrement += incrementType[i][1];
-            }
-        }
-    }
-
     private void checkAndAssignDrownedBoats(int row,int col){
         if (boatDrowned(row,col)){
             drownBoat(row,col);
@@ -209,7 +166,6 @@ public class HundirLaFlota {
     }
 
     private void setAttackedPositionState(int row, int col){
-
         if (positionIsFree){
             if (boatHit(row,col)){
                 nextPlayerTable()[row][col] = boatState[1];
@@ -233,54 +189,26 @@ public class HundirLaFlota {
         return "Player2";
     }
 
-    private char[][] currentPlayerTable(){
+    private Table currentPlayerTable(){
         if (turn % 2 == 0){
             return boatsPlayer1;
         }
         return boatsPlayer2;
     }
 
-    private char[][] nextPlayerTable(){
+    private Table nextPlayerTable(){
         if (turn % 2 != 0){
             return boatsPlayer1;
         }
         return boatsPlayer2;
     }
-
-    private boolean isNotOutOfBounds (int row, int column){
-        return ( row < GAME_LENGTH ) && ( row > -1 ) && ( column < GAME_WIDTH ) && ( column > -1 );
-    }
-    private static boolean isInteger(String s) {
-        try {
-            Integer.parseInt(s);
-        } catch(Exception e) {
-            return false;
-        }// only got here if we didn't return false
-        return true;
-    }
-
-    public String [] getColorCodes (){
-        if (turn % 2 == 0){
-            return new String[]{ANSI_BLUE,ANSI_YELLOW};
-        }
-        return new String[]{ANSI_YELLOW,ANSI_BLUE};
-    }
-
     //GETTERS
 
-    public int getGAME_LENGTH() {
-        return GAME_LENGTH;
-    }
-
-    public int getGAME_WIDTH() {
-        return GAME_WIDTH;
-    }
-
-    public char[][] getBoatsPlayer1() {
+    public Table getBoatsPlayer1() {
         return boatsPlayer1;
     }
 
-    public char[][] getBoatsPlayer2() {
+    public Table getBoatsPlayer2() {
         return boatsPlayer2;
     }
 
@@ -315,11 +243,11 @@ public class HundirLaFlota {
     //SETTERS
 
 
-    public void setBoatsPlayer1(char[][] boatsPlayer1) {
+    public void setBoatsPlayer1(Table boatsPlayer1) {
         this.boatsPlayer1 = boatsPlayer1;
     }
 
-    public void setBoatsPlayer2(char[][] boatsPlayer2) {
+    public void setBoatsPlayer2(Table boatsPlayer2) {
         this.boatsPlayer2 = boatsPlayer2;
     }
 
